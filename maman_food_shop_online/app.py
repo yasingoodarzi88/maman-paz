@@ -195,12 +195,19 @@ ADMIN_HTML = """
 <label class="field">تغییر عکس<input type="file" name="photo" required accept=".jpg,.jpeg,.png,.webp,.gif"></label><button type="submit">ذخیره عکس جدید</button></form>
 <form method="post" action="{{ url_for('delete_food', food_id=food.id) }}" onsubmit="return confirm('این غذا از منو حذف شود؟')"><button class="danger" type="submit">حذف غذا</button></form>
 </div>{% else %}<p>هنوز غذایی ثبت نشده.</p>{% endfor %}</div>
-<h2>سفارش‌ها</h2>{% for order in orders %}<div class="card"><h3>سفارش شماره {{ order.id }}</h3>
+<h2>سفارش‌ها</h2>
+<form method="post" action="{{ url_for('delete_all_delivered_orders') }}" onsubmit="return confirm('همه سفارش‌های تحویل‌داده‌شده برای همیشه حذف شوند؟ این کار قابل برگشت نیست.')">
+<button class="danger" type="submit">حذف همه سفارش‌های تحویل‌شده</button></form>
+{% for order in orders %}<div class="card"><h3>سفارش شماره {{ order.id }}</h3>
 <p>کد پیگیری: <b style="direction:ltr;display:inline-block">{{ order.tracking_code }}</b></p><p>نام: {{ order.customer }} | تلفن: {{ order.phone }}</p>
 <p>وضعیت فعلی: <span class="status">{{ order.status }}</span></p><p>توضیحات مشتری: {{ order.note or "ندارد" }}</p><h4>اقلام سفارش</h4>
 {% for item in order_items[order.id] %}<div class="order-item">{{ item.food_name }} — {{ item.quantity }} پرس</div>{% endfor %}
 <form method="post" action="{{ url_for('update_status', order_id=order.id) }}"><label class="field">وضعیت سفارش<select name="status">{% for status in statuses %}<option value="{{ status }}" {% if order.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select></label>
 <label class="field">پیام آشپز برای مشتری<textarea name="kitchen_message" rows="2" style="width:100%" placeholder="مثلاً غذات تا نیم ساعت دیگه آماده می‌شه">{{ order.kitchen_message or "" }}</textarea></label><button type="submit">ذخیره وضعیت و پیام</button></form>
+{% if order.status == "تحویل داده شد" %}
+<form method="post" action="{{ url_for('delete_delivered_order', order_id=order.id) }}" onsubmit="return confirm('این سفارش تحویل‌شده برای همیشه حذف شود؟')">
+<button class="danger" type="submit">حذف این سفارش</button></form>
+{% endif %}
 </div>{% else %}<div class="card">هنوز سفارشی ثبت نشده است.</div>{% endfor %}</main></body></html>
 """
 
@@ -351,6 +358,28 @@ def update_status(order_id):
     if order and status in allowed:
         order.status = status
         order.kitchen_message = message
+        db.session.commit()
+    return redirect(url_for("admin"))
+
+
+@app.route("/admin/orders/delete-delivered", methods=["POST"])
+@admin_required
+def delete_all_delivered_orders():
+    delivered_orders = Order.query.filter_by(status="تحویل داده شد").all()
+    for order in delivered_orders:
+        Item.query.filter_by(order_id=order.id).delete()
+        db.session.delete(order)
+    db.session.commit()
+    return redirect(url_for("admin"))
+
+
+@app.route("/admin/orders/<int:order_id>/delete-delivered", methods=["POST"])
+@admin_required
+def delete_delivered_order(order_id):
+    order = db.session.get(Order, order_id)
+    if order and order.status == "تحویل داده شد":
+        Item.query.filter_by(order_id=order.id).delete()
+        db.session.delete(order)
         db.session.commit()
     return redirect(url_for("admin"))
 
