@@ -22,8 +22,8 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 db = SQLAlchemy(app)
 
 # Change these values. Keep the GitHub repository private if you put a real password here.
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "12345678"
+ADMIN_USERNAME = "1356Af1392"
+ADMIN_PASSWORD = "123456"
 
 UPLOAD_FOLDER = os.path.join(app.root_path, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
